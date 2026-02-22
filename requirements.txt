@@ -1,0 +1,22 @@
+# Requirements for stock-harvester (Public Repo)
+# Only focused on data collection and processing
+
+# Database & Core
+sqlalchemy
+pg8000
+pandas
+numpy
+yfinance
+pytz
+python-dotenv
+
+# News & Scraping
+beautifulsoup4
+requests
+lxml
+
+# Sentiment (IndoBERT)
+tensorflow
+transformers
+scikit-learn
+huggingface-hub
