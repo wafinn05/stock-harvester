@@ -8,27 +8,27 @@ on:
 
 jobs:
   mine:
-    name: "Mine: ${{ matrix.mode }} (Batch ${{ matrix.batch }})"
+    name: "${{ matrix.display_name }}"
     runs-on: ubuntu-latest
     
     strategy:
-      fail-fast: false # Biar kalau 1 robot error, yang lain tetep jalan
+      fail-fast: false
       matrix:
         include:
-          # Tangan 1: Fokus Makro & Ekonomi Global
           - mode: "macro"
             batch: 0
             total_batches: 1
+            display_name: "Macro Miner"
           
-          # Tangan 2: Saham Kloter A (Setengah pertama)
           - mode: "stocks"
             batch: 0
             total_batches: 2
+            display_name: "Stock Miner 1"
             
-          # Tangan 3: Saham Kloter B (Setengah kedua)
           - mode: "stocks"
             batch: 1
             total_batches: 2
+            display_name: "Stock Miner 2"
 
     steps:
       - name: Checkout Code
@@ -66,4 +66,4 @@ jobs:
       - name: Report Status
         if: always()
         run: |
-          echo "Mining session (${{ matrix.mode }}) finished with status: ${{ job.status }}"
+          echo "Mining session (${{ matrix.display_name }}) finished with status: ${{ job.status }}"
