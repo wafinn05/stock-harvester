@@ -95,7 +95,7 @@ def run_daily_mining(mode="all", batch_idx=0, total_batches=1):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Hagefun Daily Miner with Sharding Support")
-    parser.add_argument("--mode", char="all", choices=["all", "macro", "stocks"], help="Mining mode")
+    parser.add_argument("--mode", default="all", choices=["all", "macro", "stocks"], help="Mining mode")
     parser.add_argument("--batch", type=int, default=0, help="Batch index (0-based)")
     parser.add_argument("--total-batches", type=int, default=1, help="Total number of batches")
     
