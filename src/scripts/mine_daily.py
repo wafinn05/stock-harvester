@@ -45,6 +45,11 @@ def run_daily_mining(mode="all", batch_idx=0, total_batches=1):
         
         # 2. Koleksi Data Per Saham
         if mode in ["all", "stocks"]:
+            if mode == "stocks":
+                logger.info("[WAIT] Memberi waktu 30 detik agar Macro Miner menyelesaikan urusan schema...")
+                import time
+                time.sleep(30)
+            
             logger.info("[STEP 2] Collecting Ticker Specific Data...")
             all_tickers_info = load_tickers("indonesia")
             
