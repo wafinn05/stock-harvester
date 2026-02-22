@@ -145,8 +145,14 @@ class FundamentalCollector:
                     skipped += 1
                     continue
 
+                # Cast ke INT untuk kolom BIGINT (SQL Fix)
+                revenue = int(revenue) if revenue is not None else None
+                net_profit = int(net_profit) if net_profit is not None else None
+                assets = int(assets) if assets is not None else None
+                liabilities = int(liabilities) if liabilities is not None else None
+
                 if assets is not None and liabilities is not None:
-                    equity = assets - liabilities
+                    equity = int(assets - liabilities)
                     # Calculate ROE if possible (Net Profit / Equity)
                     roe = net_profit / equity if equity and net_profit is not None and equity != 0 else None
                 else:
