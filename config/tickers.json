@@ -1,0 +1,128 @@
+{
+  "indonesia": [
+    {
+      "ticker": "ADRO.JK",
+      "name": "Adaro Energy"
+    },
+    {
+      "ticker": "AKRA.JK",
+      "name": "AKR Corporindo"
+    },
+    {
+      "ticker": "AMRT.JK",
+      "name": "Sumber Alfaria Trijaya"
+    },
+    {
+      "ticker": "ANTM.JK",
+      "name": "Aneka Tambang"
+    },
+    {
+      "ticker": "ASII.JK",
+      "name": "Astra International"
+    },
+    {
+      "ticker": "BBCA.JK",
+      "name": "Bank Central Asia"
+    },
+    {
+      "ticker": "BBNI.JK",
+      "name": "Bank Negara Indonesia"
+    },
+    {
+      "ticker": "BBRI.JK",
+      "name": "Bank Rakyat Indonesia"
+    },
+    {
+      "ticker": "BMRI.JK",
+      "name": "Bank Mandiri"
+    },
+    {
+      "ticker": "BRPT.JK",
+      "name": "Barito Pacific"
+    },
+    {
+      "ticker": "BUMI.JK",
+      "name": "Bumi Resources"
+    },
+    {
+      "ticker": "CPIN.JK",
+      "name": "Charoen Pokphand"
+    },
+    {
+      "ticker": "EXCL.JK",
+      "name": "XL Axiata"
+    },
+    {
+      "ticker": "GOTO.JK",
+      "name": "GoTo Gojek Tokopedia"
+    },
+    {
+      "ticker": "ICBP.JK",
+      "name": "Indofood CBP"
+    },
+    {
+      "ticker": "INCO.JK",
+      "name": "Vale Indonesia"
+    },
+    {
+      "ticker": "INDF.JK",
+      "name": "Indofood"
+    },
+    {
+      "ticker": "INKP.JK",
+      "name": "Indah Kiat Pulp"
+    },
+    {
+      "ticker": "ISAT.JK",
+      "name": "Indosat Ooredoo"
+    },
+    {
+      "ticker": "ITMG.JK",
+      "name": "Indo Tambangraya Megah"
+    },
+    {
+      "ticker": "JPFA.JK",
+      "name": "Japfa Comfeed"
+    },
+    {
+      "ticker": "KLBF.JK",
+      "name": "Kalbe Farma"
+    },
+    {
+      "ticker": "MBMA.JK",
+      "name": "Merdeka Battery Materials"
+    },
+    {
+      "ticker": "MDKA.JK",
+      "name": "Merdeka Copper Gold"
+    },
+    {
+      "ticker": "MEDC.JK",
+      "name": "Medco Energi"
+    },
+    {
+      "ticker": "PGAS.JK",
+      "name": "Perusahaan Gas Negara"
+    },
+    {
+      "ticker": "PTBA.JK",
+      "name": "Bukit Asam"
+    },
+    {
+      "ticker": "SMGR.JK",
+      "name": "Semen Indonesia"
+    },
+    {
+      "ticker": "TLKM.JK",
+      "name": "Telkom Indonesia"
+    },
+    {
+      "ticker": "UNTR.JK",
+      "name": "United Tractors"
+    },
+    {
+      "ticker": "UNVR.JK",
+      "name": "Unilever Indonesia"
+    }
+  ]
+}
