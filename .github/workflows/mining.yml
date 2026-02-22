@@ -1,4 +1,4 @@
-name: Hagefun Daily Stock Miner
+name: Daily Stock Miner
 
 on:
   schedule:
