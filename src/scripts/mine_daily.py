@@ -71,8 +71,15 @@ def run_daily_mining():
         logger.info("=== DAILY MINING SESSION COMPLETED SUCCESSFULLY ===")
 
     except Exception as e:
-        logger.critical(f"Mining session FAILED: {str(e)}")
+        import traceback
+        error_msg = traceback.format_exc()
+        logger.critical(f"=== MINING SESSION CRASHED ===")
+        print(error_msg) # Print to stdout for visibility
         sys.exit(1)
 
 if __name__ == "__main__":
+    # Force flush stdout/stderr
+    import sys
+    sys.stdout.reconfigure(line_buffering=True)
+    sys.stderr.reconfigure(line_buffering=True)
     run_daily_mining()
