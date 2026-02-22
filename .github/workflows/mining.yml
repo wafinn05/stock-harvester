@@ -8,13 +8,27 @@ on:
 
 jobs:
   mine:
-    name: Run Python Mining Script
+    name: "Mine: ${{ matrix.mode }} (Batch ${{ matrix.batch }})"
     runs-on: ubuntu-latest
     
-    # Supaya tidak tabrakan jika ada 2 run bersamaan
-    concurrency:
-      group: mining-group
-      cancel-in-progress: false
+    strategy:
+      fail-fast: false # Biar kalau 1 robot error, yang lain tetep jalan
+      matrix:
+        include:
+          # Tangan 1: Fokus Makro & Ekonomi Global
+          - mode: "macro"
+            batch: 0
+            total_batches: 1
+          
+          # Tangan 2: Saham Kloter A (Setengah pertama)
+          - mode: "stocks"
+            batch: 0
+            total_batches: 2
+            
+          # Tangan 3: Saham Kloter B (Setengah kedua)
+          - mode: "stocks"
+            batch: 1
+            total_batches: 2
 
     steps:
       - name: Checkout Code
@@ -41,16 +55,15 @@ jobs:
 
       - name: Execute Daily Miner
         env:
-          # Pastikan rahasia ini sudah di-set di GitHub Secrets Repo Public
           DB_USER: ${{ secrets.DB_USER }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           DB_HOST: ${{ secrets.DB_HOST }}
           DB_PORT: ${{ secrets.DB_PORT }}
           DB_NAME: ${{ secrets.DB_NAME }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }} # Butuh untuk IndoBERT jika download model
-        run: python src/scripts/mine_daily.py
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: python src/scripts/mine_daily.py --mode ${{ matrix.mode }} --batch ${{ matrix.batch }} --total-batches ${{ matrix.total_batches }}
 
       - name: Report Status
         if: always()
         run: |
-          echo "Mining session finished with status: ${{ job.status }}"
+          echo "Mining session (${{ matrix.mode }}) finished with status: ${{ job.status }}"

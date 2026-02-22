@@ -1,6 +1,7 @@
 import os
 import sys
 import logging
+import argparse
 from datetime import datetime
 import pytz
 
@@ -24,62 +25,87 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def run_daily_mining():
+def run_daily_mining(mode="all", batch_idx=0, total_batches=1):
     jakarta_tz = pytz.timezone('Asia/Jakarta')
     now_jakarta = datetime.now(jakarta_tz)
-    logger.info(f"=== STARTING DAILY MINING SESSION ({now_jakarta.strftime('%Y-%m-%d %H:%M:%S')}) ===")
+    logger.info(f"=== DAILY MINING SESSION ({mode.upper()}) | Batch {batch_idx+1}/{total_batches} ===")
+    logger.info(f"Time: {now_jakarta.strftime('%Y-%m-%d %H:%M:%S')}")
 
     try:
-        # 0. Verifikasi/Inisialisasi Tabel
-        logger.info("[STEP 0] Verifying database schema...")
-        init_tables(engine)
+        # 0. Verifikasi/Inisialisasi Tabel (Hanya dijalankan sekali oleh Mode Macro atau All)
+        if mode in ["all", "macro"]:
+            logger.info("[STEP 0] Verifying database schema...")
+            init_tables(engine)
         
-        # 1. Koleksi Data Makro (IHSG, Gold, USD, Oil)
-        logger.info("[STEP 1] Collecting Macroeconomic Data...")
-        collect_macro()
-        collect_macro_sentiment()
+        # 1. Koleksi Data Makro
+        if mode in ["all", "macro"]:
+            logger.info("[STEP 1] Collecting Macroeconomic Data & Global Sentiment...")
+            collect_macro()
+            collect_macro_sentiment()
         
         # 2. Koleksi Data Per Saham
-        logger.info("[STEP 2] Collecting Ticker Specific Data...")
-        # Load tickers from JSON master list
-        all_tickers_info = load_tickers("indonesia")
-        
-        # Fundamental harian (Hanya cek apakah perlu update)
-        fundamental_collector = FundamentalCollector(engine)
-        
-        for t_info in all_tickers_info:
-            ticker = t_info["ticker"]
-            try:
-                logger.info(f"--- Processing {ticker} ---")
-                
-                # A. Tarik Harga Terakhir (Period 7d sudah cukup untuk update harian)
-                fetch_and_store(ticker, period="7d")
-                
-                # B. Hitung Indikator Teknikal (RSI, MACD, dll)
-                update_indicators_for_ticker(ticker)
-                
-                # C. Tarik Sentimen Berita
-                collect_sentiment(target_ticker=ticker)
-                
-                # D. Cek Fundamental (Quarterly)
-                fundamental_collector.collect_quarterly(ticker)
-                
-            except Exception as e:
-                logger.error(f"Error processing ticker {ticker}: {str(e)}")
-                continue
+        if mode in ["all", "stocks"]:
+            logger.info("[STEP 2] Collecting Ticker Specific Data...")
+            all_tickers_info = load_tickers("indonesia")
+            
+            # --- SHARDING LOGIC ---
+            if total_batches > 1:
+                # Bagi total saham ke dalam beberapa batch
+                # Contoh: 31 saham, 2 batch -> Batch 0 (16 saham), Batch 1 (15 saham)
+                import math
+                chunk_size = math.ceil(len(all_tickers_info) / total_batches)
+                start_idx = batch_idx * chunk_size
+                end_idx = start_idx + chunk_size
+                tickers_to_process = all_tickers_info[start_idx:end_idx]
+                logger.info(f"Sharding Active: Processing {len(tickers_to_process)} tickers (Range: {start_idx}-{end_idx})")
+            else:
+                tickers_to_process = all_tickers_info
+            
+            fundamental_collector = FundamentalCollector(engine)
+            
+            for i, t_info in enumerate(tickers_to_process, 1):
+                ticker = t_info["ticker"]
+                try:
+                    logger.info(f"[{i}/{len(tickers_to_process)}] --- Processing {ticker} ---")
+                    
+                    # A. Tarik Harga Terakhir
+                    fetch_and_store(ticker, period="7d")
+                    
+                    # B. Hitung Indikator Teknikal
+                    update_indicators_for_ticker(ticker)
+                    
+                    # C. Tarik Sentimen Berita
+                    collect_sentiment(target_ticker=ticker)
+                    
+                    # D. Cek Fundamental (Quarterly)
+                    fundamental_collector.collect_quarterly(ticker)
+                    
+                except Exception as e:
+                    logger.error(f"Error processing ticker {ticker}: {str(e)}")
+                    continue
 
-        logger.info("=== DAILY MINING SESSION COMPLETED SUCCESSFULLY ===")
+        logger.info(f"=== {mode.upper()} MINING SESSION COMPLETED ===")
 
     except Exception as e:
         import traceback
         error_msg = traceback.format_exc()
-        logger.critical(f"=== MINING SESSION CRASHED ===")
-        print(error_msg) # Print to stdout for visibility
+        logger.critical(f"=== MINING SESSION CRASHED ({mode}) ===")
+        print(error_msg)
         sys.exit(1)
 
 if __name__ == "__main__":
-    # Force flush stdout/stderr
-    import sys
+    parser = argparse.ArgumentParser(description="Hagefun Daily Miner with Sharding Support")
+    parser.add_argument("--mode", char="all", choices=["all", "macro", "stocks"], help="Mining mode")
+    parser.add_argument("--batch", type=int, default=0, help="Batch index (0-based)")
+    parser.add_argument("--total-batches", type=int, default=1, help="Total number of batches")
+    
+    args, unknown = parser.parse_known_args() # Use parse_known_args to avoid issues with extra flags
+    
+    # Handle the case where someone might use -m instead of --mode if we chose to
+    # but for now we'll stick to clear arguments.
+    
+    # Force flush output for GitHub Actions Logs
     sys.stdout.reconfigure(line_buffering=True)
     sys.stderr.reconfigure(line_buffering=True)
-    run_daily_mining()
+    
+    run_daily_mining(mode=args.mode, batch_idx=args.batch, total_batches=args.total_batches)
