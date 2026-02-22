@@ -25,16 +25,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def run_daily_mining(mode="all", batch_idx=0, total_batches=1):
+def run_daily_mining(mode="all", batch_idx=0, total_batches=1, run_init=False):
     jakarta_tz = pytz.timezone('Asia/Jakarta')
     now_jakarta = datetime.now(jakarta_tz)
     logger.info(f"=== DAILY MINING SESSION ({mode.upper()}) | Batch {batch_idx+1}/{total_batches} ===")
-    logger.info(f"Time: {now_jakarta.strftime('%Y-%m-%d %H:%M:%S')}")
-
+    
     try:
-        # 0. Verifikasi/Inisialisasi Tabel (Hanya dijalankan sekali oleh Mode Macro atau All)
-        if mode in ["all", "macro"]:
-            logger.info("[STEP 0] Verifying database schema...")
+        # 0. Verifikasi/Inisialisasi Tabel (Hanya jika --init dipanggil)
+        if run_init:
+            logger.info("[INIT] Melakukan verifikasi struktur database (DDL)...")
             init_tables(engine)
         
         # 1. Koleksi Data Makro
@@ -103,6 +102,7 @@ if __name__ == "__main__":
     parser.add_argument("--mode", default="all", choices=["all", "macro", "stocks"], help="Mining mode")
     parser.add_argument("--batch", type=int, default=0, help="Batch index (0-based)")
     parser.add_argument("--total-batches", type=int, default=1, help="Total number of batches")
+    parser.add_argument("--init", action="store_true", help="Inisialisasi/Heal database schema (DDL)")
     
     args, unknown = parser.parse_known_args() # Use parse_known_args to avoid issues with extra flags
     
@@ -113,4 +113,9 @@ if __name__ == "__main__":
     sys.stdout.reconfigure(line_buffering=True)
     sys.stderr.reconfigure(line_buffering=True)
     
-    run_daily_mining(mode=args.mode, batch_idx=args.batch, total_batches=args.total_batches)
+    run_daily_mining(
+        mode=args.mode, 
+        batch_idx=args.batch, 
+        total_batches=args.total_batches,
+        run_init=args.init
+    )
