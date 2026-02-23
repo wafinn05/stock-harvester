@@ -145,7 +145,7 @@ class FundamentalCollector:
                     skipped += 1
                     continue
 
-                # Cast ke INT untuk kolom BIGINT (SQL Fix)
+                # FORSA INT CASTING (Fix: pg8000.dbapi.ProgrammingError for BIGINT)
                 revenue = int(revenue) if revenue is not None else None
                 net_profit = int(net_profit) if net_profit is not None else None
                 assets = int(assets) if assets is not None else None

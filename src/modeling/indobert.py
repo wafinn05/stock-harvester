@@ -1,11 +1,14 @@
 import torch
+
+# Optimasi untuk 2-core (GitHub Actions). 
+# Membatasi thread mencegah CPU "berantem" (contention).
+torch.set_num_threads(1)
+
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from scipy.special import softmax
 import numpy as np
 
 # Model Checkpoint (Indonesian RoBERTa Sentiment)
-# Trained on Twitter & News data. 3 Classes: usually [0=Positive, 1=Neutral, 2=Negative] OR [0=Negative, 1=Neutral, 2=Positive]
-# Reference: huggingface.co/w11wo/indonesian-roberta-base-sentiment-classifier
 MODEL_NAME = "w11wo/indonesian-roberta-base-sentiment-classifier"
 
 class SentimentEngine:
@@ -14,7 +17,7 @@ class SentimentEngine:
         try:
             self.tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
             self.model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME)
-            self.model.eval() # Set to evaluation mode
+            self.model.eval() # Mode evaluasi (Read-only)
             print("[AI] Model loaded successfully!")
         except Exception as e:
             print(f"[AI] Failed to load model: {e}")
@@ -22,39 +25,39 @@ class SentimentEngine:
 
     def predict(self, text: str) -> float:
         """
-        Returns sentiment score between -1.0 (Negative) and 1.0 (Positive).
+        Versi satu per satu (untuk kompatibilitas lama).
         """
-        if not self.model:
-            return 0.0
+        return self.predict_batch([text])[0]
 
-        # Tokenize
-        encoded_input = self.tokenizer(text, return_tensors='pt', truncation=True, max_length=128)
+    def predict_batch(self, texts: list[str]) -> list[float]:
+        """
+        TURBO MODE: Memproses banyak teks sekaligus (Grosiran).
+        """
+        if not self.model or not texts:
+            return [0.0] * len(texts)
+
+        # Tokenisasi masif dengan padding otomatis
+        encoded_input = self.tokenizer(
+            texts, 
+            return_tensors='pt', 
+            padding=True, 
+            truncation=True, 
+            max_length=128
+        )
         
-        # Inference
+        # Eksekusi AI dalam satu tarikan napas
         with torch.no_grad():
             output = self.model(**encoded_input)
         
-        # Get Probabilities
-        scores = output.logits[0].numpy()
-        probs = softmax(scores) # [Prob_0, Prob_1, Prob_2]
+        # Hitung Probabilitas
+        logits = output.logits.numpy()
+        probs = softmax(logits, axis=1) # [Baris, 3 Kolom]
         
-        # Verify Label Mapping for this specific model:
-        # According to HuggingFace model card for w11wo/indonesian-roberta-base-sentiment-classifier:
-        # Label 0: Positive
-        # Label 1: Neutral
-        # Label 2: Negative
-        # WAIT! Let's verify standard mapping. Usually it's Neg(0), Neu(1), Pos(2).
-        # Checking... w11wo model usually has: 0=Positive, 1=Neutral, 2=Negative.
+        # Mapping: 0=Positive, 1=Neutral, 2=Negative
+        # Rumus: Skor = Prob_Pos - Prob_Neg
+        results = probs[:, 0] - probs[:, 2]
         
-        prob_pos = probs[0]
-        prob_neu = probs[1]
-        prob_neg = probs[2]
-        
-        # Calculate Weighted Score
-        # Pos (+1), Neu (0), Neg (-1)
-        final_score = (prob_pos * 1.0) + (prob_neu * 0.0) + (prob_neg * -1.0)
-        
-        return float(final_score)
+        return [float(s) for s in results]
 
 # Global Instance
 _engine = None

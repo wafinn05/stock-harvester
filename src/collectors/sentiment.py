@@ -71,19 +71,20 @@ def collect_sentiment(target_ticker=None):
             rss_url = f"https://news.google.com/rss/search?q={encoded_query}&hl=id-ID&gl=ID&ceid=ID:id"
             
             feed = feedparser.parse(rss_url)
-            total_score = 0
-            count = 0
+            titles = [entry.title for entry in feed.entries[:10]] # [TURBO] Batasi 10 berita terbaru (tetap akurat)
+            count = len(titles)
             
-            for entry in feed.entries[:20]:
-                title = entry.title
-                score = get_sentiment_score(title)
-                total_score += score
-                count += 1
-            
-            final_score = 0
             if count > 0:
-                avg = total_score / count
+                # Batch Prediction (TURBO MODE)
+                if ai_engine is None:
+                    ai_engine = get_engine()
+                
+                print(f"  [TURBO] Batch processing {count} news for {ticker_clean}...")
+                scores = ai_engine.predict_batch(titles)
+                avg = sum(scores) / count
                 final_score = max(min(avg, 1.0), -1.0)
+            else:
+                final_score = 0
                 
             print(f"  {ticker_clean}: {count} news, Score: {final_score:.2f}")
             

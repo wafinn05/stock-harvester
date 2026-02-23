@@ -16,8 +16,7 @@ def collect_macro_sentiment():
     print("Collecting Macro Economic Sentiment...")
     ai_engine = get_engine()
     
-    total_score = 0
-    count = 0
+    all_headlines = []
     
     for kw in KEYWORDS:
         query = urllib.parse.quote(kw)
@@ -26,18 +25,16 @@ def collect_macro_sentiment():
         
         feed = feedparser.parse(rss_url)
         for entry in feed.entries[:10]: # Top 10 per keyword
-            title = entry.title
+            all_headlines.append(entry.title)
             
-            # Prediction
-            score = ai_engine.predict(title)
-            
-            print(f"    [{score:.2f}] {title[:60]}...")
-            total_score += score
-            count += 1
-            
-    final_score = 0
+    # Batch Prediction (TURBO MODE)
+    count = len(all_headlines)
     if count > 0:
-        final_score = max(min(total_score / count, 1.0), -1.0)
+        print(f"  [TURBO] Menganalisis {count} headline secara batch...")
+        scores = ai_engine.predict_batch(all_headlines)
+        final_score = max(min(sum(scores) / count, 1.0), -1.0)
+    else:
+        final_score = 0
         
     print(f"\nFinal Macro Sentiment Score: {final_score:.4f} (from {count} headlines)")
     

@@ -120,7 +120,7 @@ def fetch_and_store(ticker: str, period: str = DEFAULT_PERIOD):
                     "l": float(r.Low),
                     "c": float(r.Close),
                     "ac": float(r.Adj_Close),
-                    "v": int(r.Volume),
+                    "v": int(r.Volume) if r.Volume is not None and not pd.isna(r.Volume) else 0, # Cast INT (BigInt Fix)
                 }
             )
             inserted += 1
