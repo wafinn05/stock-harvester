@@ -136,14 +136,14 @@ def update_indicators_for_ticker(ticker: str) -> bool:
 
     df = calculate_indicators(df)
 
+    saved, skipped = 0, 0
+    
     # TURBO: Bulk Upsert (Kirim data sekaligus agar tidak lemot di jaringan remote)
     if not df.empty:
-        # Kita hanya kirim 20 data terakhir setiap hari (Cukup untuk menjaga akurasi harian)
-        # Tapi untuk amannya, kita kirim semua yang ada di DataFrame hasil kalkulasi
-        # tapi secara BATCH (sekaligus)
         params = []
         for date_idx, r in df.iterrows():
             if pd.isna(r["rsi"]) or pd.isna(r["sma_50"]):
+                skipped += 1
                 continue
             
             params.append({
@@ -159,8 +159,7 @@ def update_indicators_for_ticker(ticker: str) -> bool:
 
         if params:
             # Hanya proses 30 hari terakhir agar cepat (daily update)
-            # Jika ingin full refresh, hilangkan slicing ini
-            params = params[-30:] 
+            params_to_save = params[-30:] 
             
             with engine.begin() as conn:
                 conn.execute(
@@ -184,9 +183,9 @@ def update_indicators_for_ticker(ticker: str) -> bool:
                             volume_ratio = EXCLUDED.volume_ratio, atr_14 = EXCLUDED.atr_14,
                             stoch_rsi = EXCLUDED.stoch_rsi, updated_at = CURRENT_TIMESTAMP
                     """),
-                    params
+                    params_to_save
                 )
-                saved = len(params)
+                saved = len(params_to_save)
 
     print(f"[OK] {ticker}: saved={saved}, skipped={skipped}")
     return True
