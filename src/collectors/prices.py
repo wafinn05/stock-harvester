@@ -15,8 +15,8 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(os.path.dirname(CURRENT_DIR))
 
 CONFIG_DIR = os.path.join(PROJECT_ROOT, "config")
-DEFAULT_PERIOD = "2y"
-REQUEST_DELAY = 1.5
+DEFAULT_PERIOD = "7d" # TURBO: Cukup ambil data 7 hari terakhir agar kencang
+REQUEST_DELAY = 1.0 # Pangkas sedikit delay agar lebih gesit
 
 
 # UTILS
@@ -89,41 +89,34 @@ def fetch_and_store(ticker: str, period: str = DEFAULT_PERIOD):
 
     inserted = 0
 
-    with engine.begin() as conn:
-        for r in df.itertuples(index=False):
+    data_to_prepare = []
+    for r in df.itertuples(index=False):
+        data_to_prepare.append({
+            "sid": stock_id,
+            "d": r.Date,
+            "o": float(r.Open),
+            "h": float(r.High),
+            "l": float(r.Low),
+            "c": float(r.Close),
+            "ac": float(r.Adj_Close),
+            "v": int(r.Volume) if r.Volume is not None and not pd.isna(r.Volume) else 0,
+        })
 
-            trade_date = r.Date
-
-            exists = conn.execute(
-                text("""
-                    SELECT 1 FROM technical_prices
-                    WHERE stock_id = :sid AND date = :d
-                """),
-                {"sid": stock_id, "d": trade_date}
-            ).fetchone()
-
-            if exists:
-                continue
-
+    inserted = 0
+    if data_to_prepare:
+        with engine.begin() as conn:
+            # TURBO: Bulk Upsert sekaligus
             conn.execute(
                 text("""
                     INSERT INTO technical_prices
                     (stock_id, date, open, high, low, close, adj_close, volume, data_source)
                     VALUES
                     (:sid, :d, :o, :h, :l, :c, :ac, :v, 'yahoo_finance')
+                    ON CONFLICT (stock_id, date) DO NOTHING
                 """),
-                {
-                    "sid": stock_id,
-                    "d": trade_date,
-                    "o": float(r.Open),
-                    "h": float(r.High),
-                    "l": float(r.Low),
-                    "c": float(r.Close),
-                    "ac": float(r.Adj_Close),
-                    "v": int(r.Volume) if r.Volume is not None and not pd.isna(r.Volume) else 0, # Cast INT (BigInt Fix)
-                }
+                data_to_prepare
             )
-            inserted += 1
+            inserted = len(data_to_prepare)
 
     print(f"inserted {inserted} rows")
 

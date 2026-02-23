@@ -136,75 +136,57 @@ def update_indicators_for_ticker(ticker: str) -> bool:
 
     df = calculate_indicators(df)
 
-    saved, skipped = 0, 0
-
-    with engine.begin() as conn:
+    # TURBO: Bulk Upsert (Kirim data sekaligus agar tidak lemot di jaringan remote)
+    if not df.empty:
+        # Kita hanya kirim 20 data terakhir setiap hari (Cukup untuk menjaga akurasi harian)
+        # Tapi untuk amannya, kita kirim semua yang ada di DataFrame hasil kalkulasi
+        # tapi secara BATCH (sekaligus)
+        params = []
         for date_idx, r in df.iterrows():
-
             if pd.isna(r["rsi"]) or pd.isna(r["sma_50"]):
-                skipped += 1
                 continue
+            
+            params.append({
+                "sid": stock_id, "d": date_idx,
+                "rsi": float(r["rsi"]), "macd": float(r["macd"]), "macd_signal": float(r["macd_signal"]),
+                "sma20": float(r["sma_20"]), "sma50": float(r["sma_50"]), "ema20": float(r["ema_20"]),
+                "bb_u": float(r["bb_upper"]), "bb_l": float(r["bb_lower"]), "bb_m": float(r["bb_middle"]),
+                "ret": float(r["daily_return"]), "vol": float(r["volatility_20"]),
+                "vol_sma": float(r["volume_sma_20"]), "vol_ratio": float(r["volume_ratio"]),
+                "atr": float(r["atr_14"]) if not pd.isna(r["atr_14"]) else None,
+                "stoch": float(r["stoch_rsi"]) if not pd.isna(r["stoch_rsi"]) else None,
+            })
 
-            conn.execute(
-                text("""
-                    INSERT INTO technical_indicators (
-                        stock_id, date,
-                        rsi, macd, macd_signal,
-                        sma_20, sma_50, ema_20,
-                        bb_upper, bb_lower, bb_middle,
-                        daily_return, volatility_20,
-                        volume_sma_20, volume_ratio,
-                        atr_14, stoch_rsi
-                    )
-                    VALUES (
-                        :sid, :d,
-                        :rsi, :macd, :macd_signal,
-                        :sma20, :sma50, :ema20,
-                        :bb_u, :bb_l, :bb_m,
-                        :ret, :vol,
-                        :vol_sma, :vol_ratio,
-                        :atr, :stoch
-                    )
-                    ON CONFLICT (stock_id, date)
-                    DO UPDATE SET
-                        rsi = EXCLUDED.rsi,
-                        macd = EXCLUDED.macd,
-                        macd_signal = EXCLUDED.macd_signal,
-                        sma_20 = EXCLUDED.sma_20,
-                        sma_50 = EXCLUDED.sma_50,
-                        ema_20 = EXCLUDED.ema_20,
-                        bb_upper = EXCLUDED.bb_upper,
-                        bb_lower = EXCLUDED.bb_lower,
-                        bb_middle = EXCLUDED.bb_middle,
-                        daily_return = EXCLUDED.daily_return,
-                        volatility_20 = EXCLUDED.volatility_20,
-                        volume_sma_20 = EXCLUDED.volume_sma_20,
-                        volume_ratio = EXCLUDED.volume_ratio,
-                        atr_14 = EXCLUDED.atr_14,
-                        stoch_rsi = EXCLUDED.stoch_rsi,
-                        updated_at = CURRENT_TIMESTAMP
-                """),
-                {
-                    "sid": stock_id,
-                    "d": date_idx,
-                    "rsi": float(r["rsi"]),
-                    "macd": float(r["macd"]),
-                    "macd_signal": float(r["macd_signal"]),
-                    "sma20": float(r["sma_20"]),
-                    "sma50": float(r["sma_50"]),
-                    "ema20": float(r["ema_20"]),
-                    "bb_u": float(r["bb_upper"]),
-                    "bb_l": float(r["bb_lower"]),
-                    "bb_m": float(r["bb_middle"]),
-                    "ret": float(r["daily_return"]),
-                    "vol": float(r["volatility_20"]),
-                    "vol_sma": float(r["volume_sma_20"]),
-                    "vol_ratio": float(r["volume_ratio"]),
-                    "atr": float(r["atr_14"]) if not pd.isna(r["atr_14"]) else None,
-                    "stoch": float(r["stoch_rsi"]) if not pd.isna(r["stoch_rsi"]) else None,
-                }
-            )
-            saved += 1
+        if params:
+            # Hanya proses 30 hari terakhir agar cepat (daily update)
+            # Jika ingin full refresh, hilangkan slicing ini
+            params = params[-30:] 
+            
+            with engine.begin() as conn:
+                conn.execute(
+                    text("""
+                        INSERT INTO technical_indicators (
+                            stock_id, date, rsi, macd, macd_signal,
+                            sma_20, sma_50, ema_20, bb_upper, bb_lower, bb_middle,
+                            daily_return, volatility_20, volume_sma_20, volume_ratio,
+                            atr_14, stoch_rsi
+                        ) VALUES (
+                            :sid, :d, :rsi, :macd, :macd_signal,
+                            :sma20, :sma50, :ema20, :bb_u, :bb_l, :bb_m,
+                            :ret, :vol, :vol_sma, :vol_ratio, :atr, :stoch
+                        ) ON CONFLICT (stock_id, date) DO UPDATE SET
+                            rsi = EXCLUDED.rsi, macd = EXCLUDED.macd,
+                            macd_signal = EXCLUDED.macd_signal, sma_20 = EXCLUDED.sma_20,
+                            sma_50 = EXCLUDED.sma_50, ema_20 = EXCLUDED.ema_20,
+                            bb_upper = EXCLUDED.bb_upper, bb_lower = EXCLUDED.bb_lower,
+                            bb_middle = EXCLUDED.bb_middle, daily_return = EXCLUDED.daily_return,
+                            volatility_20 = EXCLUDED.volatility_20, volume_sma_20 = EXCLUDED.volume_sma_20,
+                            volume_ratio = EXCLUDED.volume_ratio, atr_14 = EXCLUDED.atr_14,
+                            stoch_rsi = EXCLUDED.stoch_rsi, updated_at = CURRENT_TIMESTAMP
+                    """),
+                    params
+                )
+                saved = len(params)
 
     print(f"[OK] {ticker}: saved={saved}, skipped={skipped}")
     return True

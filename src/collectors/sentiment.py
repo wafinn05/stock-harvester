@@ -60,6 +60,8 @@ def collect_sentiment(target_ticker=None):
         today_date = datetime.now().date()
         print(f"Processing {len(stocks)} stocks...")
         
+        global ai_engine # Fix: Terkadang python menganggap ini lokal karena ada pengecekan None
+        
         for stock_id, ticker_raw in stocks:
             ticker_clean = ticker_raw.split(".")[0]
             company_name = ticker_map.get(ticker_raw, ticker_clean)
