@@ -14,6 +14,8 @@ def collect_macro():
     print("Fetching Macro Data (Currencies, Indices, Commodities)...")
     
     dfs = []
+    for ticker, col_name in MACRO_TICKERS.items():
+        print(f"  - {ticker} -> {col_name}")
         try:
             # TURBO: Untuk harian cukup ambil 1 bulan terakhir agar kencang
             hist = yf.Ticker(ticker).history(period="1mo")
