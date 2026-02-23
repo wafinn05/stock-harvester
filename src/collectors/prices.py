@@ -87,19 +87,23 @@ def fetch_and_store(ticker: str, period: str = DEFAULT_PERIOD):
     df["Date"] = pd.to_datetime(df["Date"]).dt.date
     df.columns = [c.replace(" ", "_") for c in df.columns]
 
-    inserted = 0
-
+    # Konversi baris ke list dictionary (Lebih aman drpd itertuples jika kolom hilang)
+    data_list = df.to_dict('records')
     data_to_prepare = []
-    for r in df.itertuples(index=False):
+    
+    for row in data_list:
+        # Fallback jika Adj Close tidak ada (sering terjadi di versi yfinance baru)
+        adj_close = row.get("Adj_Close", row.get("Close"))
+        
         data_to_prepare.append({
             "sid": stock_id,
-            "d": r.Date,
-            "o": float(r.Open),
-            "h": float(r.High),
-            "l": float(r.Low),
-            "c": float(r.Close),
-            "ac": float(r.Adj_Close),
-            "v": int(r.Volume) if r.Volume is not None and not pd.isna(r.Volume) else 0,
+            "d": row["Date"],
+            "o": float(row["Open"]),
+            "h": float(row["High"]),
+            "l": float(row["Low"]),
+            "c": float(row["Close"]),
+            "ac": float(adj_close),
+            "v": int(row["Volume"]) if row.get("Volume") is not None and not pd.isna(row.get("Volume")) else 0,
         })
 
     inserted = 0
