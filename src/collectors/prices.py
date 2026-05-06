@@ -15,7 +15,7 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.dirname(os.path.dirname(CURRENT_DIR))
 
 CONFIG_DIR = os.path.join(PROJECT_ROOT, "config")
-DEFAULT_PERIOD = "7d" # TURBO: Cukup ambil data 7 hari terakhir agar kencang
+DEFAULT_PERIOD = "20d" # TURBO: Cukup ambil data 7 hari terakhir agar kencang
 REQUEST_DELAY = 1.0 # Pangkas sedikit delay agar lebih gesit
 
 
